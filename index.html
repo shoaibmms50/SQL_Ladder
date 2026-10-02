@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SQL FAANG Interview Board</title>
     
+    <!-- Load sql.js for In-Browser Execution -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Montserrat:wght@400;600;800;900&display=swap');
         
@@ -64,6 +67,44 @@
         body.light-mode .dialect-badge { background: #f0f0f0; border-color: #ccc; color: #111; }
         body.light-mode .tooltip-text { background: #fff; border-color: #ccc; color: #111; box-shadow: 0 5px 25px rgba(0,0,0,0.2); }
 
+        /* --- Option 1 & 2 Specific Styles --- */
+        .card.completed { opacity: 0.5; filter: grayscale(90%); border-color: #777 !important; }
+        .card.completed:hover { opacity: 0.8; filter: grayscale(50%); border-color: #fff !important; }
+        body.light-mode .card.completed { opacity: 0.6; filter: grayscale(100%); background: #f0f0f0; }
+        .card.completed .card-title { text-decoration: line-through; color: #888; }
+        .completed-badge {
+            position: absolute; top: 10px; left: 10px; background: #00e676; color: #000;
+            font-size: 0.7rem; font-weight: 900; padding: 3px 8px; border-radius: 4px;
+            display: none; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        .card.completed .completed-badge { display: block; }
+        
+        .mark-complete-btn {
+            background: #222; color: #fff; border: 1px solid #555; padding: 8px 20px;
+            border-radius: 6px; font-weight: 800; cursor: pointer; transition: 0.2s;
+            font-size: 0.9rem; text-transform: uppercase; margin-bottom: 10px;
+        }
+        .mark-complete-btn:hover { background: #444; }
+        .mark-complete-btn.done { background: #00e676; color: #000; border-color: #00e676; }
+        .mark-complete-btn.done:hover { background: #00c853; }
+        
+        body.light-mode .mark-complete-btn { background: #ddd; color: #111; border-color: #ccc; }
+        body.light-mode .mark-complete-btn.done { background: #00e676; color: #000; border-color: #00e676; }
+
+        .sql-editor-container { margin-bottom: 40px; border: 1px solid #444; border-radius: 8px; padding: 15px; background: #0d0d12; position: relative; }
+        body.light-mode .sql-editor-container { background: #f4f4f8; border-color: #ddd; }
+        .sql-editor-textarea {
+            width: 100%; height: 150px; background: #111; color: #00e5ff; font-family: 'Fira Code', monospace;
+            font-size: 0.85rem; padding: 15px; border: 1px solid #333; border-radius: 4px;
+            resize: vertical; margin-bottom: 15px; box-sizing: border-box; outline: none;
+        }
+        body.light-mode .sql-editor-textarea { background: #fff; color: #0000ff; border-color: #ccc; }
+        .sql-editor-textarea:focus { border-color: #00e5ff; }
+        .run-btn { background: #00e5ff; color: #000; font-weight: 800; font-size: 0.9rem; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+        .run-btn:hover { background: #00b8cc; transform: translateY(-2px); }
+        .sql-output-area { margin-top: 15px; }
+        .sql-error { color: #ff3d00; font-family: 'Fira Code', monospace; font-size: 0.85rem; background: rgba(255, 61, 0, 0.1); padding: 10px; border-left: 4px solid #ff3d00; }
+
         /* --- Custom SQL Syntax Highlighting Classes --- */
         .sql-kw { color: #569cd6; font-weight: 600; }        
         .sql-func { color: #c586c0; font-weight: 600; }      
@@ -71,7 +112,6 @@
         .sql-str { color: #ce9178; }                         
         .cte-hl { color: #ff007f; font-weight: 800; }        
 
-        /* Light Mode Overrides for Syntax Highlighting */
         body.light-mode .sql-kw { color: #0000ff; }
         body.light-mode .sql-func { color: #ff00ff; }
         body.light-mode .sql-comment { color: #008000; }
@@ -80,217 +120,115 @@
 
         /* --- Top Filter Bar --- */
         .top-nav {
-            position: fixed; top: 0; left: 0; width: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(10px);
-            padding: 15px 20px; z-index: 100;
-            display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;
-            border-bottom: 2px solid #333;
-            transition: all 0.3s;
+            position: fixed; top: 0; left: 0; width: 100%; background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px); padding: 15px 20px; z-index: 100;
+            display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; border-bottom: 2px solid #333; transition: all 0.3s;
         }
 
         .filter-btn {
-            background: #222; color: #fff; border: 1px solid #444;
-            padding: 8px 16px; border-radius: 20px;
-            font-family: inherit; font-weight: 600; font-size: 0.85rem;
-            cursor: pointer; transition: all 0.3s;
+            background: #222; color: #fff; border: 1px solid #444; padding: 8px 16px; border-radius: 20px;
+            font-family: inherit; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.3s;
         }
-
         .filter-btn:hover { background: #444; }
         .filter-btn.active { background: #fff; color: #000; box-shadow: 0 0 15px rgba(255,255,255,0.5); }
-        .theme-toggle-btn { margin-left: auto; margin-right: 40px; background: #00e5ff; color: #000; border-color: #00e5ff; }
+        .theme-toggle-btn { margin-left: auto; background: #00e5ff; color: #000; border-color: #00e5ff; }
 
         /* --- Column Board Structure --- */
-        .board-container {
-            max-width: 1600px; margin: 100px auto 40px auto;
-            padding: 20px;
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 25px;
-            align-items: start;
-        }
-
-        .column {
-            background: rgba(10, 10, 15, 0.6);
-            border-radius: 12px;
-            border: 1px solid #333;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            padding: 15px;
-            min-height: 500px;
-        }
-
-        .col-header {
-            font-size: 1.2rem; font-weight: 900; text-transform: uppercase;
-            text-align: center; padding-bottom: 15px; margin-bottom: 10px;
-            border-bottom: 4px solid; color: #fff; letter-spacing: 1px;
-        }
-
+        /* Rigid 4 columns for all non-mobile screens */
+        .board-container { max-width: 1800px; margin: 100px auto 40px auto; padding: 20px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 25px; align-items: start; }
+        .column { background: rgba(10, 10, 15, 0.6); border-radius: 12px; border: 1px solid #333; display: flex; flex-direction: column; gap: 15px; padding: 15px; min-height: 500px; }
+        .col-header { font-size: 1.2rem; font-weight: 900; text-transform: uppercase; text-align: center; padding-bottom: 15px; margin-bottom: 10px; border-bottom: 4px solid; color: #fff; letter-spacing: 1px; position: sticky; top: 70px; background: inherit; z-index: 10; }
         .col-cards { display: flex; flex-direction: column; gap: 15px; }
 
         /* --- Event Cards & Company Logos --- */
-        .card {
-            background: var(--panel-bg);
-            border: 2px solid #444; border-radius: 12px;
-            border-left: 6px solid;
-            padding: 20px; text-align: left; cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-            position: relative;
-        }
-
-        .card:hover {
-            transform: scale(1.05); z-index: 50;
-            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.8);
-            border-color: #fff;
-        }
-
-        .q-number { font-size: 2.5rem; font-weight: 900; opacity: 0.1; position: absolute; top: 5px; right: 15px; }
+        .card { background: var(--panel-bg); border: 2px solid #444; border-radius: 12px; border-left: 6px solid; padding: 20px; text-align: left; cursor: pointer; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 5px 15px rgba(0,0,0,0.5); position: relative; overflow: hidden; }
+        .card:hover { transform: scale(1.03); z-index: 50; box-shadow: 0 15px 30px rgba(0, 0, 0, 0.8); border-color: #fff; }
+        
+        .card-content { position: relative; z-index: 10; }
+        .q-number { font-size: 2.5rem; font-weight: 900; opacity: 0.1; position: absolute; top: 5px; right: 15px; z-index: 1; }
         .card-category { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
         .card-title { font-size: 1rem; font-weight: 600; color: #fff; line-height: 1.4; }
 
-        .company-badge {
-            display: flex; align-items: center; gap: 10px; margin-top: 15px;
-            padding-top: 15px; border-top: 1px solid #444;
-        }
-        body.light-mode .company-badge { border-top-color: #ddd; }
-        .company-badge img { width: 24px; height: 24px; border-radius: 4px; object-fit: contain; background: #fff; padding: 2px;}
-        .company-badge span { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); }
-        body.light-mode .company-badge span { color: #666; }
+        .company-badges-container { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 15px; padding-top: 15px; border-top: 1px solid #444; }
+        body.light-mode .company-badges-container { border-top-color: #ddd; }
+        .comp-item { display: flex; align-items: center; gap: 10px; }
+        .comp-item img { width: 48px; height: 48px; border-radius: 6px; object-fit: contain; background: transparent; padding: 2px;}
+        .comp-item span { font-size: 0.85rem; font-weight: 800; color: var(--text-muted); }
+        body.light-mode .comp-item span { color: #444; }
 
-        /* --- Giant Pop-up Modal --- */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(0, 0, 0, 0.9); backdrop-filter: blur(15px);
-            z-index: 1000; display: none; justify-content: center; align-items: center;
-            opacity: 0; transition: opacity 0.3s;
-        }
+        /* --- Modals (Giant Popup & Index) --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.9); backdrop-filter: blur(15px); z-index: 1000; display: none; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s; }
         .modal-overlay.show { opacity: 1; }
-
-        .modal-content {
-            width: 95vw; height: 95vh; background: var(--panel-bg);
-            border: 2px solid #333; border-radius: 16px;
-            overflow-y: auto; padding: 40px; position: relative;
-            box-shadow: 0 0 50px rgba(0,0,0,0.9);
-        }
-        
+        .modal-content { width: 95vw; height: 95vh; background: var(--panel-bg); border: 2px solid #333; border-radius: 16px; overflow-y: auto; padding: 40px; position: relative; box-shadow: 0 0 50px rgba(0,0,0,0.9); }
+        .index-content { width: 60vw; height: 80vh; max-width: 800px; padding: 30px; }
         .modal-content::-webkit-scrollbar { width: 8px; }
         .modal-content::-webkit-scrollbar-track { background: transparent; border-radius: 8px;}
         .modal-content::-webkit-scrollbar-thumb { background: #555; border-radius: 8px;}
 
-        .close-btn {
-            position: absolute; top: 20px; right: 30px;
-            font-size: 2.5rem; color: #fff; cursor: pointer;
-            transition: color 0.2s; background: none; border: none;
-            z-index: 2000;
-        }
+        .close-btn { position: absolute; top: 20px; right: 30px; font-size: 2.5rem; color: #fff; cursor: pointer; transition: color 0.2s; background: none; border: none; z-index: 2000; }
         .close-btn:hover { color: var(--leadlag-color); }
 
-        .m-header { margin-bottom: 30px; border-bottom: 2px dashed #444; padding-bottom: 20px; }
+        /* Index List Styling */
+        .index-list { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+        .index-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; background: rgba(255,255,255,0.03); border: 1px solid #444; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        body.light-mode .index-item { background: #f9f9f9; border-color: #ddd; }
+        .index-item:hover { background: rgba(255,255,255,0.1); border-color: #fff; transform: translateX(5px); }
+        body.light-mode .index-item:hover { background: #eee; border-color: #111; }
+        .idx-id { font-weight: 900; font-size: 1.1rem; width: 60px; color: #fff; }
+        body.light-mode .idx-id { color: #111; }
+        .idx-title { flex: 1; font-weight: 600; }
+        .idx-cat { font-size: 0.8rem; font-weight: 800; text-transform: uppercase; }
+
+        .m-header { margin-bottom: 30px; border-bottom: 2px dashed #444; padding-bottom: 20px; display: flex; flex-direction: column; align-items: flex-start; }
         .m-title { font-size: 2rem; font-weight: 900; color: #fff; margin-bottom: 10px; }
         .m-desc { font-size: 1.1rem; color: var(--text-muted); line-height: 1.6; }
-        
-        .scale-badge {
-            display: inline-block; background: rgba(255, 61, 0, 0.2); color: #ff3d00;
-            border: 1px solid #ff3d00; padding: 4px 10px; border-radius: 6px;
-            font-size: 0.8rem; font-weight: 800; margin-top: 10px; text-transform: uppercase;
-        }
-
-        .section-title {
-            font-size: 1.2rem; font-weight: 800; color: #fff;
-            margin: 30px 0 15px 0; text-transform: uppercase; letter-spacing: 1px;
-        }
+        .scale-badge { display: inline-block; background: rgba(255, 61, 0, 0.2); color: #ff3d00; border: 1px solid #ff3d00; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 800; margin-top: 10px; text-transform: uppercase; }
+        .section-title { font-size: 1.2rem; font-weight: 800; color: #fff; margin: 30px 0 15px 0; text-transform: uppercase; letter-spacing: 1px; }
 
         /* Tables & Code */
-        .code-block {
-            background: #0d0d12; border: 1px solid #333; border-radius: 8px;
-            padding: 15px; font-family: 'Fira Code', monospace; font-size: 0.85rem;
-            color: #a6accd; white-space: pre-wrap; position: relative;
-            margin-bottom: 15px; overflow-x: auto; line-height: 1.5;
-        }
-
-        .copy-btn {
-            position: absolute; top: 10px; right: 10px;
-            background: #222; color: #fff; border: 1px solid #555;
-            padding: 5px 10px; border-radius: 4px; font-size: 0.7rem; cursor: pointer;
-            transition: 0.2s; font-family: 'Montserrat', sans-serif;
-            z-index: 10;
-        }
+        .code-block { background: #0d0d12; border: 1px solid #333; border-radius: 8px; padding: 15px; font-family: 'Fira Code', monospace; font-size: 0.85rem; color: #a6accd; white-space: pre; position: relative; margin-bottom: 15px; overflow-x: auto; line-height: 1.5; }
+        .copy-btn { position: absolute; top: 10px; right: 10px; background: #222; color: #fff; border: 1px solid #555; padding: 5px 10px; border-radius: 4px; font-size: 0.7rem; cursor: pointer; transition: 0.2s; font-family: 'Montserrat', sans-serif; z-index: 10; }
         .copy-btn:hover { background: #fff; color: #000; }
-
         .data-table-wrapper { max-height: 400px; overflow-y: auto; border: 1px solid #333; border-radius: 8px; }
         .data-table-wrapper::-webkit-scrollbar { width: 6px; }
         .data-table-wrapper::-webkit-scrollbar-thumb { background: #555; border-radius: 6px; }
-
-        .data-table {
-            width: 100%; border-collapse: collapse; 
-            font-family: 'Fira Code', monospace; font-size: 0.8rem;
-            background: #111;
-        }
-        .data-table th, .data-table td {
-            border-bottom: 1px solid #333; border-right: 1px solid #333; 
-            padding: 8px 12px; text-align: left;
-        }
+        .data-table { width: 100%; border-collapse: collapse; font-family: 'Fira Code', monospace; font-size: 0.8rem; background: #111; }
+        .data-table th, .data-table td { border-bottom: 1px solid #333; border-right: 1px solid #333; padding: 8px 12px; text-align: left; }
         .data-table th { background: #1a1a24; color: #00e5ff; font-weight: 600; position: sticky; top: 0; z-index: 5; }
-        
         .side-by-side { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 
         /* Versions Styling */
-        .version-card {
-            background: rgba(255,255,255,0.02); border: 1px solid #333;
-            border-radius: 12px; padding: 25px; margin-bottom: 40px;
-            border-left: 5px solid #fff;
-        }
-        
-        .version-header {
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 20px; flex-wrap: wrap; gap: 15px;
-        }
-
-        /* Dynamic Meters */
+        .version-card { background: rgba(255,255,255,0.02); border: 1px solid #333; border-radius: 12px; padding: 25px; margin-bottom: 40px; border-left: 5px solid #fff; }
+        .version-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
         .meters { display: flex; gap: 20px; flex: 1; justify-content: flex-end; }
         .meter-box { width: 150px; }
         .meter-label { font-size: 0.75rem; font-weight: 700; margin-bottom: 5px; color: #aaa; text-transform: uppercase; }
         .meter-track { width: 100%; height: 8px; background: #222; border-radius: 4px; overflow: hidden; }
         .meter-fill { height: 100%; border-radius: 4px; transition: width 1s ease-out; }
-
-        /* Tooltips for Dialects */
         .dialects { display: flex; gap: 15px; margin-top: 25px; font-size: 0.85rem; }
-        .dialect-badge {
-            background: #1a1a24; padding: 8px 15px; border-radius: 4px; 
-            border: 1px solid #444; position: relative; cursor: help;
-            font-weight: 600; color: #fff;
-        }
+        .dialect-badge { background: #1a1a24; padding: 8px 15px; border-radius: 4px; border: 1px solid #444; position: relative; cursor: help; font-weight: 600; color: #fff; }
         .dialect-badge:hover { border-color: #00e5ff; background: #2a2a35; }
-        
-        .tooltip-text {
-            visibility: hidden; background-color: #0d0d12; color: #a6accd;
-            text-align: left; padding: 25px; border-radius: 8px; border: 1px solid #555;
-            position: absolute; z-index: 100; bottom: 125%; left: 0;
-            width: 600px; max-width: 90vw; 
-            box-shadow: 0 15px 35px rgba(0,0,0,0.4); font-family: 'Fira Code', monospace;
-            font-size: 0.85rem; white-space: pre-wrap; opacity: 0; transition: opacity 0.3s;
-        }
+        .tooltip-text { visibility: hidden; background-color: #0d0d12; color: #a6accd; text-align: left; padding: 25px; border-radius: 8px; border: 1px solid #555; position: absolute; z-index: 100; bottom: 125%; left: 0; width: 600px; max-width: 90vw; box-shadow: 0 15px 35px rgba(0,0,0,0.4); font-family: 'Fira Code', monospace; font-size: 0.85rem; white-space: pre-wrap; opacity: 0; transition: opacity 0.3s; }
         .dialect-badge:hover .tooltip-text { visibility: visible; opacity: 1; }
 
-        @media (max-width: 1100px) { .board-container { grid-template-columns: repeat(2, 1fr); } }
-        @media (max-width: 768px) {
+        /* Force 1 column ONLY on small mobile screens */
+        @media (max-width: 900px) {
             .board-container { grid-template-columns: 1fr; }
             .side-by-side { grid-template-columns: 1fr; }
             .modal-content { width: 100vw; height: 100vh; border-radius: 0; padding: 20px; }
+            .index-content { width: 100vw; height: 100vh; border-radius: 0; }
             .meters { justify-content: flex-start; width: 100%; }
-            .theme-toggle-btn { margin-right: 10px; }
         }
     </style>
 </head>
 <body class="light-mode">
 
     <div class="top-nav" id="filter-nav">
-        <button class="filter-btn active">All Questions</button>
+        <button class="filter-btn active" onclick="openIndexModal()">View All Questions (1 - 79)</button>
         <button id="theme-toggle" class="filter-btn theme-toggle-btn" onclick="toggleTheme()">🌙 Dark Mode</button>
     </div>
 
+    <!-- Strict 4-column Board Container -->
     <div class="board-container">
         <div class="column" id="col-cte">
             <div class="col-header" style="border-bottom-color: var(--cte-color);">CTE</div>
@@ -310,34 +248,104 @@
         </div>
     </div>
 
+    <!-- Question Modal -->
     <div class="modal-overlay" id="main-modal">
-        <div class="modal-content" id="modal-body">
-            <!-- Injected via JS -->
+        <div class="modal-content" id="modal-body"></div>
+    </div>
+
+    <!-- Index Modal -->
+    <div class="modal-overlay" id="index-modal">
+        <div class="modal-content index-content">
+            <button class="close-btn" onclick="closeIndexModal()">×</button>
+            <div class="m-title" style="border-bottom: 2px solid #444; padding-bottom: 10px;">Master Index: Q1 - Q79</div>
+            <div class="index-list" id="index-list"></div>
         </div>
     </div>
 
     <script>
-        // Custom Syntax Highlighter - Ensures formatting is preserved and colors match SSMS
+        // --- Option 1: In-Browser SQL.js Initialization ---
+        let SQL;
+        initSqlJs({ locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}` }).then(function(SQL_obj){
+            SQL = SQL_obj;
+            console.log("sql.js WebAssembly engine initialized successfully.");
+        });
+
+        function runLiveQuery(btn, questionId) {
+            if(!SQL) { alert("SQL engine is still loading, please wait a moment..."); return; }
+            
+            const container = btn.parentElement;
+            const textarea = container.querySelector('.sql-editor-textarea');
+            const outputArea = container.querySelector('.sql-output-area');
+            const userQuery = textarea.value.trim();
+            
+            const qData = sqlData.find(q => q.id === questionId);
+            const schema = qData.setup.schema;
+
+            outputArea.innerHTML = ""; 
+            
+            try {
+                // Creates an in-memory DB, seeds it, and tests the user's string
+                const db = new SQL.Database();
+                db.run(schema); 
+                
+                const stmt = db.prepare(userQuery);
+                const results = [];
+                let headers = [];
+                let hasHeaders = false;
+                
+                while(stmt.step()) {
+                    if(!hasHeaders) {
+                        headers = stmt.getColumnNames();
+                        hasHeaders = true;
+                    }
+                    results.push(stmt.get());
+                }
+                stmt.free();
+                db.close();
+
+                if(results.length > 0) {
+                    outputArea.innerHTML = generateTableHTML(headers, results);
+                } else {
+                    outputArea.innerHTML = "<span style='color:#a6accd'>Query executed successfully but returned 0 rows.</span>";
+                }
+            } catch(err) {
+                outputArea.innerHTML = `<div class="sql-error">Error: ${err.message}</div>`;
+            }
+        }
+
+        // --- Option 2: Progress Tracking State ---
+        let completedQuestions = JSON.parse(localStorage.getItem('completedSqlQuestions')) || [];
+
+        function toggleComplete(id) {
+            const index = completedQuestions.indexOf(id);
+            if (index > -1) {
+                completedQuestions.splice(index, 1);
+            } else {
+                completedQuestions.push(id);
+            }
+            localStorage.setItem('completedSqlQuestions', JSON.stringify(completedQuestions));
+            filterBoard(); 
+            
+            const btn = document.getElementById('complete-btn');
+            if(btn) {
+                if(completedQuestions.includes(id)) {
+                    btn.classList.add('done');
+                    btn.innerText = "✓ Completed";
+                } else {
+                    btn.classList.remove('done');
+                    btn.innerText = "Mark as Complete";
+                }
+            }
+        }
+
         function highlightSQL(text) {
             if (!text) return "";
-            
             let comments = [];
-            text = text.replace(/--.*/g, match => {
-                comments.push(match);
-                return `__COMMENT_${comments.length - 1}__`;
-            });
-            
+            text = text.replace(/--.*/g, match => { comments.push(match); return `__COMMENT_${comments.length - 1}__`; });
             let strings = [];
-            text = text.replace(/'[^']*'/g, match => {
-                strings.push(match);
-                return `__STRING_${strings.length - 1}__`;
-            });
-            
+            text = text.replace(/'[^']*'/g, match => { strings.push(match); return `__STRING_${strings.length - 1}__`; });
             let spans = [];
-            text = text.replace(/<span[^>]*>.*?<\/span>/g, match => {
-                spans.push(match);
-                return `__SPAN_${spans.length - 1}__`;
-            });
+            text = text.replace(/<span[^>]*>.*?<\/span>/g, match => { spans.push(match); return `__SPAN_${spans.length - 1}__`; });
 
             text = text.replace(/\b(LEAD|LAG|ROW_NUMBER|DENSE_RANK|RANK|COUNT|SUM|AVG|MAX|MIN|MOD|ROUND|MONTH|EXTRACT)\b(?=\s*\()/gi, '<span class="sql-func">$1</span>');
             
@@ -364,34 +372,54 @@
         }
 
         const sqlData = [];
-        
-        const companies = [
-            { name: "Meta", logo: "https://logo.clearbit.com/meta.com" },
-            { name: "Amazon", logo: "https://logo.clearbit.com/amazon.com" },
-            { name: "Google", logo: "https://logo.clearbit.com/google.com" },
-            { name: "Uber", logo: "https://logo.clearbit.com/uber.com" },
-            { name: "Netflix", logo: "https://logo.clearbit.com/netflix.com" }
+        const baseCompanyPool = [
+            { name: "Meta", logo: "meta.png" },
+            { name: "Amazon", logo: "amazon.png" },
+            { name: "Google", logo: "google.jgp.jpg" },
+            { name: "Uber", logo: "uber.png" },
+            { name: "Netflix", logo: "netflix.png" }
         ];
 
-        // Boilerplate data injector for 15+ rows per question for robust testing
+        function getTitle(id) {
+            const explicitTitles = [
+                "", "Top N Ranked Values Analysis", "Dense Ranking of Activity Scores", "Sequential Value Ranking",
+                "Month-Over-Month Fare Growth", "Highest Volume Ranking", "Rank-based Percentile Filtering",
+                "Duplicate Record Aggregation", "High-Frequency Value Detection", "CTE-based Threshold Filtering",
+                "Aggregated Metrics via CTE", "Cross-Platform Growth Analysis", "Grouped Occurrences CTE", 
+                "Sequential Value Spikes Identification", "Previous vs Current Value Comparison", "Lagging Growth Metrics",
+                "Detecting Rising Thresholds", "Sequential Drop or Spike Analysis", "Row-Over-Row Value Increases",
+                "Lag-based Anomaly Detection", "Cross-Row Duplicate Matching", "Self-Referencing Value Pairs",
+                "Matching Valued Entities", "Recursive Pair Detection", "Identical Value Correlation",
+                "Intra-table Relational Matching", "Self-Join Duplicate Resolution"
+            ];
+            if(id < explicitTitles.length) return explicitTitles[id];
+            const generic = ["User Retention Analysis", "Rolling Average Tracking", "Cumulative Sum Reporting", "Session Timeout Extraction", "Consecutive Action Streaks", "Top Percentile Evaluation"];
+            return generic[id % generic.length] + " - Part " + (Math.floor(id/10) + 1);
+        }
+
         const defaultInsert = `(1,'A',10),(2,'B',20),(3,'C',15),(4,'D',30),(5,'E',25),(6,'F',40),(7,'G',10),(8,'H',60),(9,'I',30),(10,'J',20),(11,'K',50),(12,'L',70),(13,'M',15),(14,'N',80),(15,'O',90)`;
 
-        // Building the 26 FAANG Questions Structurally
-        for(let i = 1; i <= 26; i++) {
+        for(let i = 1; i <= 79; i++) {
             let targetCol, catLabel, color;
-            let company = companies[i % companies.length];
-
-            // Assign Categories systematically
-            if(i >= 1 && i <= 6) { targetCol = 'cards-window'; catLabel = 'Window Functions'; color = 'var(--window-color)'; }
-            else if(i >= 7 && i <= 12) { targetCol = 'cards-cte'; catLabel = 'CTE'; color = 'var(--cte-color)'; }
-            else if(i >= 13 && i <= 19) { targetCol = 'cards-leadlag'; catLabel = 'Lead/Lag'; color = 'var(--leadlag-color)'; }
+            if(i % 4 === 1) { targetCol = 'cards-window'; catLabel = 'Window Functions'; color = 'var(--window-color)'; }
+            else if(i % 4 === 2) { targetCol = 'cards-cte'; catLabel = 'CTE'; color = 'var(--cte-color)'; }
+            else if(i % 4 === 3) { targetCol = 'cards-leadlag'; catLabel = 'Lead/Lag'; color = 'var(--leadlag-color)'; }
             else { targetCol = 'cards-selfjoin'; catLabel = 'Self Joins'; color = 'var(--selfjoin-color)'; }
+
+            let qCompanies = [];
+            if(i === 11) {
+                qCompanies = [
+                    { name: "Nvidia", logo: "https://logo.clearbit.com/nvidia.com" },
+                    { name: "Microsoft", logo: "https://logo.clearbit.com/microsoft.com" }
+                ];
+            } else {
+                qCompanies = [baseCompanyPool[(i - 1) % baseCompanyPool.length]];
+            }
 
             let qData = {
                 id: i, targetColumn: targetCol, categoryLabel: catLabel, color: color,
-                companyName: company.name, logoUrl: company.logo,
-                title: `${company.name} Data Extraction Challenge #${i}`,
-                question: `A standard interview question from ${company.name} focusing heavily on ${catLabel}. Retrieve the precise target metrics across millions of rows efficiently.`,
+                companies: qCompanies, title: getTitle(i),
+                question: `A rigorous data extraction challenge utilizing ${catLabel} to accurately retrieve target metrics across large partitions.`,
                 setup: {
 schema: `CREATE TABLE Records (
     Id INT, 
@@ -407,15 +435,8 @@ ${defaultInsert};`,
                 versions: []
             };
 
-            // Uber Question #4 Exact Implementation
             if(i === 4) {
-                qData.companyName = "Uber";
-                qData.logoUrl = "https://logo.clearbit.com/uber.com";
-                qData.title = "Uber Month-Over-Month Fare Growth";
                 qData.question = "Calculate the month-over-month growth percentage of total fares for each city.";
-                qData.targetColumn = 'cards-cte';
-                qData.categoryLabel = 'CTE & Lead/Lag';
-                qData.color = 'var(--cte-color)';
                 qData.setup.schema = `CREATE TABLE rides (\n    city_id INT, \n    ride_date DATE, \n    fare DECIMAL(10,2)\n);\n\nINSERT INTO rides VALUES \n(1,'2026-01-15',25.50), (1,'2026-01-20',30.00), (1,'2026-02-10',40.00), (1,'2026-02-18',45.00), \n(2,'2026-01-05',15.00), (2,'2026-01-25',20.00), (2,'2026-02-12',22.00), (2,'2026-02-28',28.00), \n(3,'2026-01-10',50.00), (3,'2026-02-15',60.00), (3,'2026-03-10',55.00), (1,'2026-03-05',60.00), \n(2,'2026-03-20',35.00), (3,'2026-04-10',70.00), (1,'2026-04-15',80.00);`;
                 qData.setup.outputHeaders = ["city_id", "ride_date", "fare"];
                 qData.setup.outputData = [[1,'2026-01-15',25.50], [1,'2026-01-20',30.00], [1,'2026-02-10',40.00], [1,'2026-02-18',45.00]];
@@ -479,11 +500,10 @@ FROM <span class="cte-hl">live_forecast</span>
 WHERE 1=1
     AND prev_fare IS NOT NULL;`,
                     finalOutHeaders: ["city_id", "ride_month", "growth_pct"], finalOutData: [[1,2,53.15],[1,3,-29.41],[2,2,42.86]],
-bqCode: `WITH <span class="cte-hl">monthly_aggregates</span> AS (\n    SELECT city_id, EXTRACT(MONTH FROM ride_date) AS ride_month, SUM(fare) AS total_fare FROM \`dataset.rides\` GROUP BY city_id, ride_month\n), \n<span class="cte-hl">live_forecast</span> AS (\n    SELECT city_id, ride_month, total_fare, LAG(total_fare) OVER (PARTITION BY city_id ORDER BY ride_month) AS prev_fare FROM <span class="cte-hl">monthly_aggregates</span>\n) \nSELECT city_id, ride_month, ROUND((total_fare - prev_fare) / prev_fare * 100, 2) AS growth_pct FROM <span class="cte-hl">live_forecast</span> WHERE 1=1 AND prev_fare IS NOT NULL;`,
-sfCode: `WITH <span class="cte-hl">monthly_aggregates</span> AS (\n    SELECT city_id, MONTH(ride_date) AS ride_month, SUM(fare) AS total_fare FROM rides GROUP BY city_id, MONTH(ride_date)\n), \n<span class="cte-hl">live_forecast</span> AS (\n    SELECT city_id, ride_month, total_fare, LAG(total_fare) OVER (PARTITION BY city_id ORDER BY ride_month) AS prev_fare FROM <span class="cte-hl">monthly_aggregates</span>\n) \nSELECT city_id, ride_month, ROUND((total_fare - prev_fare) / prev_fare * 100, 2) AS growth_pct FROM <span class="cte-hl">live_forecast</span> WHERE 1=1 AND prev_fare IS NOT NULL;`
+bqCode: `WITH <span class="cte-hl">monthly_aggregates</span> AS (\n    SELECT city_id, EXTRACT(MONTH FROM ride_date) AS ride_month, SUM(fare) AS total_fare \n    FROM \`dataset.rides\` GROUP BY city_id, ride_month\n), \n<span class="cte-hl">live_forecast</span> AS (\n    SELECT city_id, ride_month, total_fare, LAG(total_fare) OVER (PARTITION BY city_id ORDER BY ride_month) AS prev_fare \n    FROM <span class="cte-hl">monthly_aggregates</span>\n) \nSELECT city_id, ride_month, ROUND((total_fare - prev_fare) / prev_fare * 100, 2) AS growth_pct \nFROM <span class="cte-hl">live_forecast</span> \nWHERE 1=1 AND prev_fare IS NOT NULL;`,
+sfCode: `WITH <span class="cte-hl">monthly_aggregates</span> AS (\n    SELECT city_id, MONTH(ride_date) AS ride_month, SUM(fare) AS total_fare \n    FROM rides GROUP BY city_id, MONTH(ride_date)\n), \n<span class="cte-hl">live_forecast</span> AS (\n    SELECT city_id, ride_month, total_fare, LAG(total_fare) OVER (PARTITION BY city_id ORDER BY ride_month) AS prev_fare \n    FROM <span class="cte-hl">monthly_aggregates</span>\n) \nSELECT city_id, ride_month, ROUND((total_fare - prev_fare) / prev_fare * 100, 2) AS growth_pct \nFROM <span class="cte-hl">live_forecast</span> \nWHERE 1=1 AND prev_fare IS NOT NULL;`
                 });
             }
-            // Generating formatted SQL Blocks dynamically for the other 25 placeholders based on the category
             else if(targetCol === 'cards-window') {
                 qData.versions.push({
                     type: "Window Function (DENSE_RANK)", efficiency: 96, timeScore: 92, timeStr: "8.4s", color: color,
@@ -619,6 +639,7 @@ sfCode: `SELECT DISTINCT r1.Val FROM Records r1 JOIN Records r2 ON r1.Val = r2.V
 
         const modal = document.getElementById('main-modal');
         const modalBody = document.getElementById('modal-body');
+        const indexModal = document.getElementById('index-modal');
 
         function generateTableHTML(headers, dataRows) {
             if(!headers || !dataRows) return '';
@@ -646,17 +667,28 @@ sfCode: `SELECT DISTINCT r1.Val FROM Records r1 JOIN Records r2 ON r1.Val = r2.V
             document.getElementById('cards-selfjoin').innerHTML = '';
 
             sqlData.forEach(item => {
+                const isCompleted = completedQuestions.includes(item.id);
                 const card = document.createElement('div');
-                card.className = `card`;
+                card.className = `card ${isCompleted ? 'completed' : ''}`;
                 card.style.borderLeftColor = item.color;
                 
+                let badgesHtml = item.companies.map(c => `
+                    <div class="comp-item">
+                        <img src="${c.logo}" alt="${c.name} Logo" onerror="this.src='https://via.placeholder.com/48';">
+                        <span>${c.name}</span>
+                    </div>
+                `).join('');
+
+                // card-bg-logo deliberately removed here as per user instruction.
                 card.innerHTML = `
-                    <div class="q-number">Q${item.id}</div>
-                    <div class="card-category" style="color:${item.color}">${item.categoryLabel}</div>
-                    <div class="card-title">${item.title}</div>
-                    <div class="company-badge">
-                        <img src="${item.logoUrl}" alt="${item.companyName} Logo">
-                        <span>${item.companyName}</span>
+                    <div class="completed-badge">✓ DONE</div>
+                    <div class="card-content">
+                        <div class="q-number">Q${item.id}</div>
+                        <div class="card-category" style="color:${item.color}">${item.categoryLabel}</div>
+                        <div class="card-title">${item.title}</div>
+                        <div class="company-badges-container">
+                            ${badgesHtml}
+                        </div>
                     </div>
                 `;
 
@@ -669,10 +701,43 @@ sfCode: `SELECT DISTINCT r1.Val FROM Records r1 JOIN Records r2 ON r1.Val = r2.V
             });
         }
 
+        function openIndexModal() {
+            const list = document.getElementById('index-list');
+            list.innerHTML = sqlData.map(q => {
+                const isCompleted = completedQuestions.includes(q.id);
+                return `
+                <div class="index-item" onclick="closeIndexModal(); openModalById(${q.id})">
+                    <span class="idx-id">Q${q.id}</span>
+                    <span class="idx-title" style="${isCompleted ? 'text-decoration:line-through; opacity:0.5;' : ''}">${q.title}</span>
+                    <span class="idx-cat" style="color:${q.color}">${q.categoryLabel}</span>
+                </div>
+            `}).join('');
+            
+            indexModal.style.display = 'flex';
+            setTimeout(() => { indexModal.classList.add('show'); }, 10);
+        }
+
+        function closeIndexModal() {
+            indexModal.classList.remove('show');
+            setTimeout(() => { indexModal.style.display = 'none'; }, 300);
+        }
+
+        function openModalById(id) {
+            const data = sqlData.find(q => q.id === id);
+            if(data) openModal(data);
+        }
+
         function openModal(data) {
+            const isDone = completedQuestions.includes(data.id);
+            const btnClass = isDone ? 'mark-complete-btn done' : 'mark-complete-btn';
+            const btnText = isDone ? '✓ Completed' : 'Mark as Complete';
+
+            const defaultTable = data.setup.schema.includes('CREATE TABLE rides') ? 'rides' : 'Records';
+
             modalBody.innerHTML = `
                 <button class="close-btn" onclick="closeModal()">×</button>
                 <div class="m-header">
+                    <button id="complete-btn" class="${btnClass}" onclick="toggleComplete(${data.id})">${btnText}</button>
                     <div class="m-title">Q${data.id}: ${data.title}</div>
                     <div class="m-desc">${data.question}</div>
                     <div class="scale-badge">Performance Metrics Simulated for 50 Million Rows</div>
@@ -682,13 +747,20 @@ sfCode: `SELECT DISTINCT r1.Val FROM Records r1 JOIN Records r2 ON r1.Val = r2.V
                 <div class="side-by-side">
                     <div class="code-block" style="max-height: 400px;">
                         <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                        ${highlightSQL(data.setup.schema)}
+${highlightSQL(data.setup.schema)}
                     </div>
                     <div>
                         ${generateTableHTML(data.setup.outputHeaders, data.setup.outputData)}
                     </div>
                 </div>
                 
+                <div class="section-title">Interactive SQL Playground</div>
+                <div class="sql-editor-container">
+                    <textarea class="sql-editor-textarea" spellcheck="false">SELECT * FROM ${defaultTable} LIMIT 5;</textarea>
+                    <button class="run-btn" onclick="runLiveQuery(this, ${data.id})">▶ Run Live Query in Browser</button>
+                    <div class="sql-output-area"></div>
+                </div>
+
                 <div class="section-title">Solutions (Ranked by Efficiency)</div>
                 <div id="versions-container"></div>
             `;
@@ -703,7 +775,7 @@ sfCode: `SELECT DISTINCT r1.Val FROM Records r1 JOIN Records r2 ON r1.Val = r2.V
                         <div class="side-by-side" style="margin-bottom: 20px;">
                             <div class="code-block">
                                 <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                                ${highlightSQL(block.code)}
+${highlightSQL(block.code)}
                             </div>
                             <div>
                                 ${highlightSQL("-- Output of Block " + (bIndex + 1))}
@@ -744,7 +816,7 @@ sfCode: `SELECT DISTINCT r1.Val FROM Records r1 JOIN Records r2 ON r1.Val = r2.V
                     <div class="side-by-side" style="margin-bottom: 20px;">
                         <div class="code-block">
                             <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                            ${highlightSQL(ver.finalQuery)}
+${highlightSQL(ver.finalQuery)}
                         </div>
                         <div>
                             ${highlightSQL("-- Final Expected Output")}
